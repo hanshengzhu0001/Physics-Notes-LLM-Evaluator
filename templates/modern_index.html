@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔬 Modern Physics Notes Evaluator - SOTA 2024</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        .typing-effect {
+            border-right: 2px solid #667eea;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { border-color: #667eea; }
+            51%, 100% { border-color: transparent; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <header class="gradient-bg text-white shadow-lg">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-atom text-3xl"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold">Modern Physics Evaluator</h1>
+                            <p class="text-sm opacity-90">State-of-the-Art AI-Powered Physics Assessment</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button @click="activeTab = 'statement'"
+                                :class="activeTab === 'statement' ? 'bg-white text-purple-600' : 'text-white hover:bg-white hover:bg-opacity-20'"
+                                class="px-4 py-2 rounded-lg transition-colors duration-200">
+                            <i class="fas fa-edit mr-2"></i>Statement
+                        </button>
+                        <button @click="activeTab = 'document'"
+                                :class="activeTab === 'document' ? 'bg-white text-purple-600' : 'text-white hover:bg-white hover:bg-opacity-20'"
+                                class="px-4 py-2 rounded-lg transition-colors duration-200">
+                            <i class="fas fa-file-pdf mr-2"></i>Document
+                        </button>
+                        <button @click="activeTab = 'analytics'"
+                                :class="activeTab === 'analytics' ? 'bg-white text-purple-600' : 'text-white hover:bg-white hover:bg-opacity-20'"
+                                class="px-4 py-2 rounded-lg transition-colors duration-200">
+                            <i class="fas fa-chart-bar mr-2"></i>Analytics
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Statement Evaluation Tab -->
+            <div v-if="activeTab === 'statement'" class="space-y-6">
+                <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-microscope text-purple-600 mr-2"></i>
+                        Statement Evaluation
+                    </h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Physics Statement
+                            </label>
+                            <textarea
+                                v-model="statementInput"
+                                placeholder="Enter a physics statement to evaluate..."
+                                class="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                :class="{ 'typing-effect': isTyping }"
+                            ></textarea>
+                        </div>
+
+                        <div class="flex items-center space-x-4">
+                            <button
+                                @click="evaluateStatement"
+                                :disabled="!statementInput.trim() || isEvaluating"
+                                class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                            >
+                                <i v-if="isEvaluating" class="fas fa-spinner fa-spin"></i>
+                                <i v-else class="fas fa-search"></i>
+                                <span>{{ isEvaluating ? 'Evaluating...' : 'Evaluate Statement' }}</span>
+                            </button>
+
+                            <button
+                                @click="clearResults"
+                                class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-200"
+                            >
+                                <i class="fas fa-trash mr-2"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div v-if="evaluationResult" class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">
+                            <i class="fas fa-chart-line text-green-600 mr-2"></i>
+                            Evaluation Results
+                        </h3>
+                        <div class="flex items-center space-x-2">
+                            <span :class="evaluationResult.is_correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                  class="px-3 py-1 rounded-full text-sm font-medium">
+                                <i :class="evaluationResult.is_correct ? 'fas fa-check' : 'fas fa-times'" class="mr-1"></i>
+                                {{ evaluationResult.is_correct ? 'Correct' : 'Incorrect' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Confidence Level -->
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-blue-600">Confidence</p>
+                                    <p class="text-2xl font-bold text-blue-800 capitalize">{{ evaluationResult.confidence }}</p>
+                                </div>
+                                <i class="fas fa-target text-blue-500 text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <!-- Physics Concept -->
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-purple-600">Concept</p>
+                                    <p class="text-lg font-bold text-purple-800 capitalize">{{ evaluationResult.physics_concept.replace('_', ' ') }}</p>
+                                </div>
+                                <i class="fas fa-atom text-purple-500 text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <!-- Statement Type -->
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-green-600">Type</p>
+                                    <p class="text-lg font-bold text-green-800 capitalize">{{ evaluationResult.statement_type.replace('_', ' ') }}</p>
+                                </div>
+                                <i class="fas fa-tag text-green-500 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Feedback -->
+                    <div class="mt-6 space-y-4">
+                        <div v-if="evaluationResult.feedback" class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-gray-800 mb-2">
+                                <i class="fas fa-comments text-blue-600 mr-2"></i>
+                                Detailed Feedback
+                            </h4>
+                            <p class="text-gray-700">{{ evaluationResult.feedback }}</p>
+                        </div>
+
+                        <div v-if="evaluationResult.suggestions && evaluationResult.suggestions.length" class="bg-yellow-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-gray-800 mb-2">
+                                <i class="fas fa-lightbulb text-yellow-600 mr-2"></i>
+                                Suggestions for Improvement
+                            </h4>
+                            <ul class="list-disc list-inside text-gray-700 space-y-1">
+                                <li v-for="suggestion in evaluationResult.suggestions" :key="suggestion">
+                                    {{ suggestion }}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div v-if="evaluationResult.related_concepts && evaluationResult.related_concepts.length" class="bg-indigo-50 p-4 rounded-lg">
+                            <h4 class="font-semibold text-gray-800 mb-2">
+                                <i class="fas fa-link text-indigo-600 mr-2"></i>
+                                Related Concepts
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span v-for="concept in evaluationResult.related_concepts"
+                                      :key="concept"
+                                      class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">
+                                    {{ concept }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Evaluation Tab -->
+            <div v-if="activeTab === 'document'" class="space-y-6">
+                <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-file-pdf text-red-600 mr-2"></i>
+                        Document Evaluation
+                    </h2>
+
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors duration-200">
+                        <input
+                            type="file"
+                            ref="fileInput"
+                            @change="handleFileSelect"
+                            accept=".pdf,.txt,.md"
+                            class="hidden"
+                        >
+                        <div v-if="!selectedFile" @click="$refs.fileInput.click()" class="cursor-pointer">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600 mb-2">Click to upload a physics document</p>
+                            <p class="text-sm text-gray-500">Supports PDF, TXT, and Markdown files</p>
+                        </div>
+                        <div v-else class="space-y-4">
+                            <div class="flex items-center justify-center space-x-3">
+                                <i class="fas fa-file text-purple-600 text-2xl"></i>
+                                <div class="text-left">
+                                    <p class="font-medium text-gray-800">{{ selectedFile.name }}</p>
+                                    <p class="text-sm text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
+                                </div>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button
+                                    @click="evaluateDocument"
+                                    :disabled="isEvaluatingDocument"
+                                    class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                                >
+                                    <i v-if="isEvaluatingDocument" class="fas fa-spinner fa-spin"></i>
+                                    <i v-else class="fas fa-search"></i>
+                                    <span>{{ isEvaluatingDocument ? 'Analyzing...' : 'Analyze Document' }}</span>
+                                </button>
+                                <button
+                                    @click="clearFileSelection"
+                                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+                                >
+                                    <i class="fas fa-times mr-2"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Results -->
+                <div v-if="documentResult" class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-chart-pie text-blue-600 mr-2"></i>
+                        Document Analysis Summary
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-green-800">{{ documentResult.document_summary.total_statements }}</div>
+                            <div class="text-sm text-green-600">Total Statements</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-blue-800">{{ documentResult.document_summary.correct_percentage.toFixed(1) }}%</div>
+                            <div class="text-sm text-blue-600">Accuracy</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg text-center">
+                            <div class="text-lg font-bold text-purple-800 capitalize">{{ documentResult.document_summary.dominant_concept }}</div>
+                            <div class="text-sm text-purple-600">Main Concept</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-lg text-center">
+                            <div class="text-lg font-bold text-yellow-800 capitalize">{{ documentResult.document_summary.average_confidence }}</div>
+                            <div class="text-sm text-yellow-600">Avg Confidence</div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div v-if="documentResult.recommendations && documentResult.recommendations.length" class="bg-orange-50 p-4 rounded-lg mb-6">
+                        <h4 class="font-semibold text-gray-800 mb-2">
+                            <i class="fas fa-exclamation-triangle text-orange-600 mr-2"></i>
+                            Recommendations
+                        </h4>
+                        <ul class="list-disc list-inside text-gray-700 space-y-1">
+                            <li v-for="rec in documentResult.recommendations" :key="rec">{{ rec }}</li>
+                        </ul>
+                    </div>
+
+                    <!-- Statement Details -->
+                    <div class="space-y-4">
+                        <h4 class="font-semibold text-gray-800">
+                            <i class="fas fa-list text-gray-600 mr-2"></i>
+                            Statement-by-Statement Analysis
+                        </h4>
+                        <div v-for="(item, index) in documentResult.statement_evaluations.slice(0, 10)"
+                             :key="index"
+                             class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <p class="text-gray-800 mb-2">{{ item.statement }}</p>
+                                    <div class="flex items-center space-x-4 text-sm">
+                                        <span :class="item.evaluation.is_correct ? 'text-green-600' : 'text-red-600'">
+                                            <i :class="item.evaluation.is_correct ? 'fas fa-check' : 'fas fa-times'" class="mr-1"></i>
+                                            {{ item.evaluation.is_correct ? 'Correct' : 'Incorrect' }}
+                                        </span>
+                                        <span class="text-blue-600">
+                                            <i class="fas fa-target mr-1"></i>
+                                            {{ item.evaluation.confidence }}
+                                        </span>
+                                        <span class="text-purple-600">
+                                            <i class="fas fa-atom mr-1"></i>
+                                            {{ item.evaluation.physics_concept.replace('_', ' ') }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="item.evaluation.feedback" class="mt-2 text-sm text-gray-600 bg-gray-100 p-2 rounded">
+                                {{ item.evaluation.feedback }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div v-if="activeTab === 'analytics'" class="space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Concept Distribution Chart -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-chart-pie text-purple-600 mr-2"></i>
+                            Physics Concept Distribution
+                        </h3>
+                        <canvas id="conceptChart" width="300" height="300"></canvas>
+                    </div>
+
+                    <!-- Confidence Trends -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-chart-bar text-blue-600 mr-2"></i>
+                            Confidence Levels
+                        </h3>
+                        <canvas id="confidenceChart" width="300" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Common Misconceptions -->
+                <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-exclamation-circle text-red-600 mr-2"></i>
+                        Common Misconceptions
+                    </h3>
+                    <div class="space-y-3">
+                        <div v-for="misconception in analyticsData.common_misconceptions"
+                             :key="misconception.type"
+                             class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span class="font-medium text-gray-800 capitalize">{{ misconception.type.replace('_', ' ') }}</span>
+                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm">
+                                {{ misconception.count }} occurrences
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="gradient-bg text-white py-8 mt-12">
+            <div class="container mx-auto px-4 text-center">
+                <div class="flex items-center justify-center space-x-2 mb-4">
+                    <i class="fas fa-atom text-2xl"></i>
+                    <span class="text-lg font-semibold">Modern Physics Evaluator</span>
+                </div>
+                <p class="text-sm opacity-80">
+                    State-of-the-Art AI-Powered Physics Assessment • Built with Modern ML Stack 2024
+                </p>
+                <div class="mt-4 flex justify-center space-x-4 text-sm">
+                    <span class="opacity-60">Powered by:</span>
+                    <span class="bg-white bg-opacity-20 px-2 py-1 rounded">Transformers</span>
+                    <span class="bg-white bg-opacity-20 px-2 py-1 rounded">PyTorch</span>
+                    <span class="bg-white bg-opacity-20 px-2 py-1 rounded">LangChain</span>
+                    <span class="bg-white bg-opacity-20 px-2 py-1 rounded">RAG</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'statement',
+                    statementInput: '',
+                    isTyping: false,
+                    isEvaluating: false,
+                    evaluationResult: null,
+                    selectedFile: null,
+                    isEvaluatingDocument: false,
+                    documentResult: null,
+                    analyticsData: {
+                        concept_distribution: {
+                            mechanics: 35,
+                            electromagnetism: 25,
+                            thermodynamics: 15,
+                            quantum_mechanics: 10,
+                            optics: 8,
+                            other: 7
+                        },
+                        confidence_trends: {
+                            high: 60,
+                            medium: 30,
+                            low: 10
+                        },
+                        common_misconceptions: [
+                            { type: 'factual_inaccuracy', count: 45 },
+                            { type: 'mathematical_error', count: 32 },
+                            { type: 'conceptual_misunderstanding', count: 28 }
+                        ]
+                    }
+                }
+            },
+
+            mounted() {
+                this.initializeCharts();
+            },
+
+            methods: {
+                async evaluateStatement() {
+                    if (!this.statementInput.trim()) return;
+
+                    this.isEvaluating = true;
+                    this.evaluationResult = null;
+
+                    try {
+                        const response = await fetch('/api/evaluate-statement', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                statement: this.statementInput
+                            })
+                        });
+
+                        if (response.ok) {
+                            this.evaluationResult = await response.json();
+                        } else {
+                            throw new Error('Evaluation failed');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error evaluating statement. Please try again.');
+                    } finally {
+                        this.isEvaluating = false;
+                    }
+                },
+
+                clearResults() {
+                    this.statementInput = '';
+                    this.evaluationResult = null;
+                },
+
+                handleFileSelect(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        this.selectedFile = file;
+                    }
+                },
+
+                clearFileSelection() {
+                    this.selectedFile = null;
+                    this.documentResult = null;
+                    this.$refs.fileInput.value = '';
+                },
+
+                formatFileSize(bytes) {
+                    if (bytes === 0) return '0 Bytes';
+                    const k = 1024;
+                    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                },
+
+                async evaluateDocument() {
+                    if (!this.selectedFile) return;
+
+                    this.isEvaluatingDocument = true;
+                    this.documentResult = null;
+
+                    const formData = new FormData();
+                    formData.append('file', this.selectedFile);
+
+                    try {
+                        const response = await fetch('/api/evaluate-document', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            this.documentResult = await response.json();
+                        } else {
+                            throw new Error('Document evaluation failed');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error evaluating document. Please try again.');
+                    } finally {
+                        this.isEvaluatingDocument = false;
+                    }
+                },
+
+                initializeCharts() {
+                    this.$nextTick(() => {
+                        // Concept Distribution Chart
+                        const conceptCtx = document.getElementById('conceptChart');
+                        if (conceptCtx) {
+                            new Chart(conceptCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: Object.keys(this.analyticsData.concept_distribution),
+                                    datasets: [{
+                                        data: Object.values(this.analyticsData.concept_distribution),
+                                        backgroundColor: [
+                                            '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B',
+                                            '#EF4444', '#6B7280'
+                                        ],
+                                        borderWidth: 2
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        legend: {
+                                            position: 'bottom'
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        // Confidence Chart
+                        const confidenceCtx = document.getElementById('confidenceChart');
+                        if (confidenceCtx) {
+                            new Chart(confidenceCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: Object.keys(this.analyticsData.confidence_trends),
+                                    datasets: [{
+                                        label: 'Confidence Level',
+                                        data: Object.values(this.analyticsData.confidence_trends),
+                                        backgroundColor: '#3B82F6',
+                                        borderRadius: 4
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            display: false
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
